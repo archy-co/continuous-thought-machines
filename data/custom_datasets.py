@@ -7,6 +7,9 @@ from tqdm.auto import tqdm
 from PIL import Image
 from datasets import load_dataset
 
+import os
+import json
+
 class SortDataset(Dataset):
     def __init__(self, N):
        self.N = N
@@ -138,6 +141,147 @@ class ImageNet(Dataset):
         image = self.transform(data_item['image'].convert('RGB'))
         target = data_item['label']
         return image, target
+
+
+class KanjiMeaning_singleLabel(Dataset):
+    def __init__(self, kanji_folder_path, transform=None, isGrayscale=False):
+        self.kanji_folder_path = kanji_folder_path
+        self.transform = transform
+        self.data = []
+
+        self.isGrayscale = isGrayscale
+
+        metadata_path = os.path.join(kanji_folder_path, 'metadata.jsonl')
+        if not os.path.exists(metadata_path):
+            raise FileNotFoundError(f"metadata.jsonl not found in {kanji_folder_path}")
+
+        with open(metadata_path, 'r', encoding='utf-8') as f:
+            for line_num, line in enumerate(f, 1):
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    data = json.loads(line)
+                    if 'file_name' in data and 'prompt' in data:
+                        image_path = os.path.join(kanji_folder_path, data['file_name'])
+                        if os.path.exists(image_path):
+                            self.data.append({
+                                'file_name': data['file_name'],
+                                'image_path': image_path,
+                                'prompt': data['prompt']
+                            })
+                        else:
+                            print(f"Warning: Image file {data['file_name']} not found")
+                    else:
+                        print(f"Warning: Line {line_num} missing 'file_name' or 'prompt' field")
+                except json.JSONDecodeError as e:
+                    print(f"Warning: Invalid JSON on line {line_num}: {e}")
+
+        if not self.data:
+            raise ValueError("No valid data found in metadata.jsonl")
+
+        print(f"Loaded {len(self.data)} Kanji samples from {kanji_folder_path}")
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        if idx >= len(self.data):
+            raise IndexError("Index out of range")
+
+        item = self.data[idx]
+
+        try:
+            if self.isGrayscale:
+                image = Image.open(item['image_path']).convert('L')
+            else:
+                image = Image.open(item['image_path']).convert('RGB')
+        except Exception as e:
+            raise RuntimeError(f"Error loading image {item['file_name']}: {e}")
+
+        if self.transform:
+            image = self.transform(image)
+
+        return image, item['prompt']
+
+    def get_prompts(self):
+        return [item['prompt'] for item in self.data]
+
+    def get_filenames(self):
+        return [item['file_name'] for item in self.data]
+
+
+from collections import defaultdict
+
+class KanjiMeaning_multiLabel(Dataset):
+    def __init__(self, kanji_folder_path, transform=None, isGrayscale=False):
+        self.kanji_folder_path = kanji_folder_path
+        self.transform = transform
+        self.data = []
+        self.isGrayscale = isGrayscale
+
+        metadata_path = os.path.join(kanji_folder_path, 'metadata.jsonl')
+        if not os.path.exists(metadata_path):
+            raise FileNotFoundError(f"metadata.jsonl not found in {kanji_folder_path}")
+
+        # Group prompts by image path
+        grouped_data = defaultdict(list)
+
+        with open(metadata_path, 'r', encoding='utf-8') as f:
+            for line_num, line in enumerate(f, 1):
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    data = json.loads(line)
+                    if 'file_name' in data and 'prompt' in data:
+                        image_path = os.path.join(kanji_folder_path, data['file_name'])
+                        if os.path.exists(image_path):
+                            grouped_data[image_path].append(data['prompt'].strip())
+                        else:
+                            print(f"Warning: Image file {data['file_name']} not found")
+                    else:
+                        print(f"Warning: Line {line_num} missing 'file_name' or 'prompt' field")
+                except json.JSONDecodeError as e:
+                    print(f"Warning: Invalid JSON on line {line_num}: {e}")
+
+        for image_path, prompts in grouped_data.items():
+            self.data.append({
+                'image_path': image_path,
+                'file_name': os.path.basename(image_path),
+                'prompts': list(sorted(set(prompts)))
+            })
+
+        if not self.data:
+            raise ValueError("No valid data found in metadata.jsonl")
+
+        print(f"Loaded {len(self.data)} unique Kanji samples from {kanji_folder_path}")
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        item = self.data[idx]
+
+        try:
+            if self.isGrayscale:
+                image = Image.open(item['image_path']).convert('L')
+            else:
+                image = Image.open(item['image_path']).convert('RGB')
+        except Exception as e:
+            raise RuntimeError(f"Error loading image {item['file_name']}: {e}")
+
+        if self.transform:
+            image = self.transform(image)
+
+        return image, item['prompts']
+
+    def get_prompts(self):
+        all_prompts = set()
+        for item in self.data:
+            all_prompts.update(item['prompts'])
+        return sorted(all_prompts)
+
   
 class MazeImageFolder(ImageFolder):
     """

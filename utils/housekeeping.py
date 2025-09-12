@@ -34,3 +34,45 @@ def set_seed(seed=42, deterministic=True):
     torch.cuda.manual_seed_all(seed)
     torch.backends.cudnn.deterministic = deterministic
     torch.backends.cudnn.benchmark = False
+
+
+
+import csv
+
+def save_dict_to_csv(dictionary, filename):
+    with open(filename, 'w', newline='', encoding='utf-8') as file:
+        writer = csv.writer(file)
+        writer.writerow(['meaning', 'number'])
+        for meaning, number in dictionary.items():
+            writer.writerow([meaning, number])
+    print(f"Dictionary saved to {filename}")
+
+def load_dict_from_csv(filename):
+    if not os.path.exists(filename):
+        print(f"File {filename} not found!")
+        return {}
+
+    dictionary = {}
+    try:
+        with open(filename, 'r', encoding='utf-8') as file:
+            reader = csv.reader(file)
+            header = next(reader)
+            for row in reader:
+                if len(row) == 2:
+                    meaning, number = row
+                    dictionary[meaning] = int(number)
+        print(f"Loaded {len(dictionary)} entries from {filename}")
+    except Exception as e:
+        print(f"Error reading {filename}: {e}")
+        return {}
+
+    return dictionary
+
+def get_meaning(number, dictionary):
+    for meaning, num in dictionary.items():
+        if num == number:
+            return meaning
+    return None
+
+def get_number(meaning, dictionary):
+    return dictionary.get(meaning, None)
