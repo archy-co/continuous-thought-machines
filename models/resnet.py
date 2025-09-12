@@ -349,7 +349,9 @@ def resnet152(in_channels, feature_scales, stride=2, pretrained=False, progress=
         feature_scales, stride, "resnet152", Bottleneck, [3, 4, 36, 3], pretrained, progress, device, do_initial_max_pool, **kwargs
     )
 
-def prepare_resnet_backbone(backbone_type):
+def prepare_resnet_backbone(backbone_type, isGrayscale=False):
+    
+    input_dim = 1 if isGrayscale else 3
       
     resnet_family = resnet18 # Default
     if '34' in backbone_type: resnet_family = resnet34
@@ -362,7 +364,7 @@ def prepare_resnet_backbone(backbone_type):
     hyper_blocks_to_keep = list(range(1, int(block_num_str) + 1)) if block_num_str.isdigit() else [1, 2, 3, 4]
 
     backbone = resnet_family(
-        3,
+        input_dim,
         hyper_blocks_to_keep,
         stride=2,
         pretrained=False,

@@ -97,6 +97,7 @@ class ContinuousThoughtMachine(nn.Module):
                  dropout_nlm=None,
                  neuron_select_type='random-pairing',  
                  n_random_pairing_self=0,
+                 isGrayscale=False
                  ):
         super(ContinuousThoughtMachine, self).__init__()
 
@@ -114,6 +115,8 @@ class ContinuousThoughtMachine(nn.Module):
         self.neuron_select_type = neuron_select_type
         self.memory_length = memory_length
         dropout_nlm = dropout if dropout_nlm is None else dropout_nlm
+
+        self.isGrayscale = isGrayscale
 
         # --- Assertions ---
         self.verify_args()
@@ -251,7 +254,11 @@ class ContinuousThoughtMachine(nn.Module):
         doesn't hurt the model in any way that we can tell.
         """
         if 'resnet' in self.backbone_type:
-            self.initial_rgb = nn.LazyConv2d(3, 1, 1) # Adapts input channels lazily
+            if self.isGrayscale:
+                print(f"Image is grayscale. using nn.LazyConv2d(1, 1, 1)")
+                self.initial_rgb = nn.LazyConv2d(1, 1, 1) # Adapts input channels lazily (for grayscale image)
+            else:
+                self.initial_rgb = nn.LazyConv2d(3, 1, 1) # Adapts input channels lazily
         else:
             self.initial_rgb = nn.Identity()
 
@@ -295,7 +302,7 @@ class ContinuousThoughtMachine(nn.Module):
             d_backbone = self.get_d_backbone()
             self.backbone = ParityBackbone(n_embeddings=2, d_embedding=d_backbone)
         elif 'resnet' in self.backbone_type:
-            self.backbone = prepare_resnet_backbone(self.backbone_type)
+            self.backbone = prepare_resnet_backbone(self.backbone_type, isGrayscale=self.isGrayscale)
         elif self.backbone_type == 'none':
             self.backbone = nn.Identity()
         else:
