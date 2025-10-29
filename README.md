@@ -1,5 +1,13 @@
 # 🕰️ The Continuous Thought Machine
 
+## This repository's point
+
+In this fork I tried to experiment with CTM to predict meanings of Japanese Kanjis. Both real Kanjis and made up Kanjis (generated with Stable Diffusion) were tested. For real Kanjis, CTM started to learn and understand their meaning, but still often confused similar meanings. As for made up Kanjis, CTM's predictions were quite random, which is also justifiable, because made up Kanjis themselves are quite random.
+
+Original README follows.
+
+---
+
 📚 [PAPER: Technical Report](https://arxiv.org/abs/2505.05522) | 📝 [Blog](https://sakana.ai/ctm/) | 🕹️ [Interactive Website](https://pub.sakana.ai/ctm) | ✏️ [Tutorial](examples/01_mnist.ipynb)
 
 ![Activations](assets/activations.gif)
